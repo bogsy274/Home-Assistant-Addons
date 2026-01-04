@@ -1,5 +1,5 @@
 name: ICS Filter Proxy
-version: 1.0.5
+version: 1.0.6
 slug: ics_filter_proxy
 description: "Fetch and filter ICS feeds for Home Assistant"
 arch:
