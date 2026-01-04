@@ -1,0 +1,4 @@
+name: Home Assistant Add-ons
+url: https://github.com/example/Home-Assistant-Addons
+description: Add-ons for Home Assistant including an ICS filter proxy.
+maintainer: Example Maintainer
