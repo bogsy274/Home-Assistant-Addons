@@ -5,6 +5,9 @@ This add-on fetches an upstream ICS feed and republishes filtered ICS calendars 
 - `http://<HA-IP>:8099/glyn_year7.ics`
 - `http://<HA-IP>:8099/glyn_term_dates.ics`
 
+For troubleshooting and connectivity checks, a lightweight health endpoint is available at `http://<HA-IP>:8099/health` which e
+xposes the configured upstream URL and current log level.
+
 ## Installation
 
 1. In Home Assistant, open **Settings > Add-ons > Add-on Store**.

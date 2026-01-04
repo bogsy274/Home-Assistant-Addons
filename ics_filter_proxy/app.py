@@ -6,10 +6,11 @@ from pathlib import Path
 from typing import Callable
 
 import requests
-from flask import Flask, Response
+from flask import Flask, Response, jsonify
 from icalendar import Calendar
 
-logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
+LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO").upper()
+logging.basicConfig(level=LOG_LEVEL, format="%(asctime)s %(levelname)s %(message)s")
 logger = logging.getLogger(__name__)
 
 OPTIONS_PATH = Path("/data/options.json")
@@ -31,9 +32,11 @@ def load_options() -> dict:
     if OPTIONS_PATH.exists():
         try:
             with OPTIONS_PATH.open("r", encoding="utf-8") as f:
-                return json.load(f)
+                data = json.load(f)
+                logger.info("Loaded options.json with keys: %s", list(data.keys()))
+                return data
         except (json.JSONDecodeError, OSError) as exc:
-            logger.warning("Failed to read options.json: %s", exc)
+            logger.warning("Failed to read options.json: %s", exc, exc_info=True)
     return {}
 
 
@@ -42,6 +45,7 @@ def get_upstream_url() -> str:
     upstream = options.get("upstream_url") if isinstance(options, dict) else None
     if not upstream:
         upstream = os.getenv("UPSTREAM_URL", DEFAULT_UPSTREAM)
+    logger.info("Using upstream URL: %s", upstream)
     return upstream
 
 
@@ -49,6 +53,7 @@ def fetch_calendar(url: str) -> Calendar:
     logger.info("Fetching calendar from %s", url)
     response = requests.get(url, timeout=15)
     response.raise_for_status()
+    logger.info("Fetched calendar: status=%s content_length=%s", response.status_code, len(response.content))
     return Calendar.from_ical(response.content)
 
 
@@ -98,9 +103,29 @@ def build_filtered_calendar(calendar: Calendar, predicate: Callable) -> bytes:
 
 def serve_filtered_calendar(predicate: Callable) -> Response:
     upstream_url = get_upstream_url()
-    calendar = fetch_calendar(upstream_url)
-    filtered = build_filtered_calendar(calendar, predicate)
+    try:
+        calendar = fetch_calendar(upstream_url)
+        filtered = build_filtered_calendar(calendar, predicate)
+    except Exception as exc:  # pylint: disable=broad-except
+        logger.exception("Failed to serve filtered calendar from %s", upstream_url)
+        return Response(
+            f"Failed to fetch or process calendar from {upstream_url}: {exc}",
+            status=502,
+            mimetype="text/plain",
+        )
     return Response(filtered, mimetype="text/calendar")
+
+
+@app.route("/health", methods=["GET"])
+def health():
+    """Lightweight health endpoint for HA logs and connectivity checks."""
+    return jsonify(
+        {
+            "status": "ok",
+            "upstream_url": get_upstream_url(),
+            "log_level": LOG_LEVEL,
+        }
+    )
 
 
 @app.route("/glyn_year7.ics", methods=["GET"])
@@ -115,4 +140,5 @@ def glyn_term_dates():
 
 if __name__ == "__main__":
     port = int(os.getenv("PORT", "8099"))
+    logger.info("Starting ICS Filter Proxy on 0.0.0.0:%s", port)
     app.run(host="0.0.0.0", port=port)
