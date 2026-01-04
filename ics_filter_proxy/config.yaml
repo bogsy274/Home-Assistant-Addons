@@ -1,0 +1,17 @@
+name: ICS Filter Proxy
+version: 1.0.4
+slug: ics_filter_proxy
+description: "Fetch and filter ICS feeds for Home Assistant"
+arch:
+  - amd64
+  - aarch64
+  - armv7
+  - i386
+startup: services
+boot: auto
+ports:
+  8099/tcp: 8099
+schema:
+  upstream_url: str?
+options:
+  upstream_url: "https://www.glynschool.org/calendar/events.ics"
