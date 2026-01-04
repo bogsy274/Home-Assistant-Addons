@@ -22,7 +22,7 @@ COPY app.py /app/app.py
 
 # s6 service to run the Flask server
 RUN mkdir -p /etc/services.d/ics_filter_proxy \
-    && printf '#!/usr/bin/with-contenv sh\nexec python3 -u /app/app.py\n' > /etc/services.d/ics_filter_proxy/run \
+    && printf '#!/command/with-contenv sh\nexec python3 -u /app/app.py\n' > /etc/services.d/ics_filter_proxy/run \
     && chmod +x /etc/services.d/ics_filter_proxy/run
 
 EXPOSE 8099
